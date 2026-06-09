@@ -1,0 +1,148 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+html.dark {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-slate-50 text-slate-800 antialiased;
+  background-image: radial-gradient(
+      55rem 35rem at 12% -8%,
+      rgba(99, 102, 241, 0.1),
+      transparent 60%
+    ),
+    radial-gradient(
+      48rem 30rem at 105% 5%,
+      rgba(236, 72, 153, 0.08),
+      transparent 55%
+    );
+  background-attachment: fixed;
+}
+html.dark body {
+  @apply bg-slate-950 text-slate-200;
+  background-image: radial-gradient(
+      60rem 40rem at 10% -10%,
+      rgba(99, 102, 241, 0.18),
+      transparent 60%
+    ),
+    radial-gradient(
+      50rem 32rem at 110% 0%,
+      rgba(168, 85, 247, 0.14),
+      transparent 55%
+    );
+}
+
+/* ---------- Reusable component classes ---------- */
+@layer components {
+  .card {
+    @apply rounded-2xl border border-slate-200/80 bg-white/80 shadow-card backdrop-blur-sm transition-colors;
+  }
+  html.dark .card {
+    @apply border-white/10 bg-slate-900/60;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/70 disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.97];
+  }
+  .btn-primary {
+    @apply btn bg-gradient-to-br from-brand-500 to-violet-600 text-white shadow-glow hover:from-brand-400 hover:to-violet-500;
+  }
+  .btn-ghost {
+    @apply btn border border-slate-200 bg-white/70 text-slate-700 hover:bg-white;
+  }
+  html.dark .btn-ghost {
+    @apply border-white/10 bg-white/5 text-slate-200 hover:bg-white/10;
+  }
+  .btn-success {
+    @apply btn bg-gradient-to-br from-emerald-500 to-teal-600 text-white hover:from-emerald-400 hover:to-teal-500;
+  }
+  .btn-danger {
+    @apply btn bg-gradient-to-br from-rose-500 to-pink-600 text-white hover:from-rose-400 hover:to-pink-500;
+  }
+
+  .chip {
+    @apply inline-flex select-none items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all;
+  }
+  .chip-off {
+    @apply border-slate-200 bg-white/60 text-slate-500 hover:border-brand-300 hover:text-brand-600;
+  }
+  html.dark .chip-off {
+    @apply border-white/10 bg-white/5 text-slate-400 hover:border-brand-500/60 hover:text-brand-300;
+  }
+  .chip-on {
+    @apply border-transparent bg-gradient-to-br from-brand-500 to-violet-600 text-white shadow-sm;
+  }
+
+  .input {
+    @apply w-full rounded-xl border border-slate-200 bg-white/80 px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-300/50;
+  }
+  html.dark .input {
+    @apply border-white/10 bg-white/5 text-slate-100 placeholder:text-slate-500;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-brand-500 via-violet-500 to-fuchsia-500 bg-clip-text text-transparent;
+  }
+}
+
+/* ---------- Answer prose rendering ---------- */
+.answer-prose p {
+  @apply mb-3 leading-relaxed;
+}
+.answer-prose p:last-child {
+  @apply mb-0;
+}
+.answer-prose code {
+  @apply rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[0.85em] text-violet-700;
+}
+html.dark .answer-prose code {
+  @apply bg-white/10 text-violet-300;
+}
+
+/* ---------- 3D flip card ---------- */
+.flip-scene {
+  perspective: 1600px;
+}
+.flip-card {
+  transform-style: preserve-3d;
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.flip-card.is-flipped {
+  transform: rotateY(180deg);
+}
+.flip-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.flip-back {
+  transform: rotateY(180deg);
+}
+
+/* ---------- Custom scrollbar ---------- */
+.scroll-area::-webkit-scrollbar {
+  width: 8px;
+}
+.scroll-area::-webkit-scrollbar-thumb {
+  @apply rounded-full bg-slate-300;
+}
+html.dark .scroll-area::-webkit-scrollbar-thumb {
+  @apply bg-slate-700;
+}
+
+/* Countdown ring */
+.ring-progress {
+  transition: stroke-dashoffset 1s linear;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+}

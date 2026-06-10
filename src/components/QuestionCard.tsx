@@ -6,7 +6,6 @@ import { DiffChip, SubjectChip } from "./ui";
 
 /**
  * Practice-style question card: answer hidden until revealed.
- * Shows all metadata (difficulty, topic, company tag) + bookmark / done actions.
  */
 export default function QuestionCard({
   q,
@@ -17,7 +16,6 @@ export default function QuestionCard({
   q: Question;
   showSubject?: boolean;
   defaultOpen?: boolean;
-  /** optional quiz verdict badge: true = knew, false = missed */
   verdict?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -30,29 +28,32 @@ export default function QuestionCard({
   };
 
   return (
-    <article className="card animate-fade-in p-5 sm:p-6">
+    <article className="card-flat animate-fade-in p-5 sm:p-6">
       {/* meta row */}
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <span className="rounded-lg bg-slate-100 px-2 py-1 font-mono text-[11px] font-bold text-slate-500 dark:bg-white/5 dark:text-slate-400">
+      <div className="flex flex-wrap items-center gap-2">
+        <span
+          className="border-2 border-ink px-2 py-0.5 font-display text-xs dark:border-cream"
+          style={{ borderRadius: 2 }}
+        >
           Q{q.number}
         </span>
         <DiffChip d={q.difficulty} />
-        {showSubject && <SubjectChip id={q.subject} />}
-        <span className="hidden text-xs font-medium text-slate-400 sm:inline">
-          {q.topic}
-        </span>
+        {showSubject && <SubjectChip id={q.subject} small />}
+        <span className="meta hidden opacity-40 sm:inline">{q.topic}</span>
         {q.company && (
-          <span className="inline-flex items-center gap-1 rounded-full border border-violet-500/20 bg-violet-500/10 px-2.5 py-1 text-xs font-semibold text-violet-600 dark:text-violet-300">
-            🏢 {q.company}
+          <span
+            className="meta border-2 border-ink bg-mustard px-2 py-0.5 text-ink dark:border-cream"
+            style={{ borderRadius: 2 }}
+          >
+            {q.company}
           </span>
         )}
         {verdict !== undefined && (
           <span
-            className={`ml-auto rounded-full px-2.5 py-1 text-xs font-bold ${
-              verdict
-                ? "bg-emerald-500/12 text-emerald-600 dark:text-emerald-300"
-                : "bg-rose-500/12 text-rose-600 dark:text-rose-300"
+            className={`meta ml-auto border-2 border-ink px-2.5 py-1 text-ink dark:border-cream ${
+              verdict ? "bg-ok" : "bg-bad"
             }`}
+            style={{ borderRadius: 2 }}
           >
             {verdict ? "✓ Knew it" : "✗ Missed"}
           </span>
@@ -60,44 +61,43 @@ export default function QuestionCard({
       </div>
 
       {/* question */}
-      <h3 className="text-[15px] font-bold leading-relaxed sm:text-base">
-        {q.question}
-      </h3>
+      <h3 className="mt-3 text-[15px] font-bold leading-relaxed sm:text-base">{q.question}</h3>
 
       {/* answer */}
       {open && (
-        <div className="answer-prose mt-4 animate-fade-in rounded-xl border border-slate-200/80 bg-slate-50/80 p-4 text-sm text-slate-600 dark:border-white/5 dark:bg-white/[0.03] dark:text-slate-300">
-          <div className="mb-2 text-[10px] font-extrabold uppercase tracking-widest text-brand-500 dark:text-brand-300">
-            Model answer
-          </div>
+        <div
+          className="answer-prose mt-4 animate-fade-in border-2 border-ink bg-paper p-4 text-sm text-ink dark:border-cream dark:bg-cream/5 dark:text-cream/90"
+          style={{ borderRadius: 2 }}
+        >
+          <div className="meta mb-2 opacity-50">Model answer</div>
           <div dangerouslySetInnerHTML={{ __html: renderAnswer(q.answer) }} />
         </div>
       )}
 
       {/* actions */}
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <button onClick={reveal} className={open ? "btn-ghost !py-2 text-xs" : "btn-primary !py-2 text-xs"}>
+        <button onClick={reveal} className={`${open ? "btn-ghost" : "btn-primary"} !px-5 !py-2`}>
           {open ? "Hide answer" : "Show answer"}
         </button>
         <button
           onClick={() => toggleMastered(q.id)}
-          className={`btn !py-2 text-xs ${
+          className={`btn !px-5 !py-2 ${
             p.mastered
-              ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300"
-              : "border border-slate-200 bg-white/60 text-slate-500 hover:text-emerald-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-400"
+              ? "border-ink bg-ok text-ink hover:bg-ink hover:text-ok dark:border-cream"
+              : "border-ink/30 bg-transparent text-ink/50 hover:border-ink hover:text-ink dark:border-cream/30 dark:text-cream/50 dark:hover:border-cream dark:hover:text-cream"
           }`}
-          title="Mark as done / mastered"
         >
           {p.mastered ? "✓ Done" : "Mark done"}
         </button>
         <button
           onClick={() => toggleBookmark(q.id)}
-          className={`ml-auto flex h-9 w-9 items-center justify-center rounded-xl border text-base transition ${
-            p.bookmarked
-              ? "border-amber-400/40 bg-amber-400/15 text-amber-500"
-              : "border-slate-200 bg-white/60 text-slate-400 hover:text-amber-500 dark:border-white/10 dark:bg-white/5"
-          }`}
           title="Bookmark"
+          className={`ml-auto flex h-10 w-10 items-center justify-center border-2 text-lg transition-colors ${
+            p.bookmarked
+              ? "border-ink bg-mustard text-ink dark:border-cream"
+              : "border-ink/30 text-ink/40 hover:border-ink hover:text-ink dark:border-cream/30 dark:text-cream/40 dark:hover:border-cream dark:hover:text-cream"
+          }`}
+          style={{ borderRadius: 2 }}
         >
           {p.bookmarked ? "★" : "☆"}
         </button>

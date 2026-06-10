@@ -2,14 +2,29 @@ import { useRef, useState } from "react";
 import { useApp } from "../lib/store";
 import { Modal, Segmented, Toggle } from "../components/ui";
 import { TOTAL } from "../lib/data";
+import { relativeTime } from "../lib/utils";
 
 const STORAGE_KEY = "recall-arena:v1";
 
 export default function Settings() {
-  const { prefs, setPrefs, resetProgress, clearHistory, progress, history } = useApp();
+  const {
+    prefs,
+    setPrefs,
+    resetProgress,
+    clearHistory,
+    progress,
+    history,
+    cloudEnabled,
+    user,
+    syncStatus,
+    lastSyncedAt,
+    signIn,
+    signOutNow,
+  } = useApp();
   const [confirm, setConfirm] = useState<null | "progress" | "history">(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [importMsg, setImportMsg] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const exportData = () => {
     const raw = window.localStorage.getItem(STORAGE_KEY) ?? "{}";
@@ -43,21 +58,94 @@ export default function Settings() {
   const seen = Object.values(progress).filter((p) => p.seen).length;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8 animate-fade-in">
-      <header>
-        <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-brand-500 dark:text-brand-300">
-          Make it yours
-        </p>
-        <h1 className="mt-1 text-3xl font-black tracking-tight">
-          Settings <span className="gradient-text">&amp; Data</span> ⚙
+    <div className="mx-auto max-w-2xl space-y-10 animate-fade-in">
+      <header className="border-b-2 border-ink pb-6 dark:border-cream">
+        <p className="meta opacity-50">Make it yours</p>
+        <h1 className="display mt-2 text-6xl sm:text-7xl">
+          Controls<span className="text-mustard">.</span>
         </h1>
       </header>
 
+      {/* Account / sync */}
+      <section className="card-flat p-6">
+        <h2 className="meta mb-4 border-b-2 border-ink pb-2 dark:border-cream">Account &amp; sync</h2>
+        {!cloudEnabled ? (
+          <div className="space-y-3">
+            <p className="text-sm font-medium opacity-70">
+              Cloud sync is <b>not configured</b>. Your progress lives in this browser only (use
+              Export below to move it). To enable Google sign-in + cross-device sync, follow the
+              5-minute setup in the README — create a free Firebase project and paste its config
+              into <code className="bg-mustard px-1.5 py-0.5 text-ink" style={{ borderRadius: 2 }}>src/firebase-config.ts</code>.
+            </p>
+          </div>
+        ) : user ? (
+          <div className="flex flex-wrap items-center gap-4">
+            {user.photoURL ? (
+              <img
+                src={user.photoURL}
+                alt=""
+                referrerPolicy="no-referrer"
+                className="h-12 w-12 border-2 border-ink object-cover dark:border-cream"
+                style={{ borderRadius: 2 }}
+              />
+            ) : (
+              <span
+                className="flex h-12 w-12 items-center justify-center border-2 border-ink bg-mustard font-display text-lg text-ink dark:border-cream"
+                style={{ borderRadius: 2 }}
+              >
+                {(user.displayName ?? user.email ?? "?").charAt(0).toUpperCase()}
+              </span>
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-bold">{user.displayName ?? user.email}</div>
+              <div className="meta mt-0.5 opacity-60">
+                {syncStatus === "synced" && lastSyncedAt && `● Synced ${relativeTime(lastSyncedAt)}`}
+                {syncStatus === "syncing" && "○ Syncing…"}
+                {syncStatus === "error" && "✕ Sync error — changes kept locally"}
+              </div>
+            </div>
+            <button
+              className="btn-ghost !px-5 !py-2"
+              onClick={async () => {
+                setBusy(true);
+                await signOutNow();
+                setBusy(false);
+              }}
+              disabled={busy}
+            >
+              Sign out
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <p className="max-w-sm text-sm font-medium opacity-70">
+              Sign in with Google and your progress follows you to any device.
+            </p>
+            <button
+              className="btn-primary"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  await signIn();
+                } catch (e) {
+                  console.error(e);
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              {busy ? "…" : "Sign in with Google"}
+            </button>
+          </div>
+        )}
+      </section>
+
       {/* Blitz defaults */}
-      <section className="card space-y-5 p-6">
-        <h2 className="text-sm font-extrabold uppercase tracking-wider text-slate-400">Blitz defaults</h2>
+      <section className="card-flat space-y-5 p-6">
+        <h2 className="meta border-b-2 border-ink pb-2 dark:border-cream">Blitz defaults</h2>
         <div>
-          <div className="mb-1.5 text-xs font-bold text-slate-400">Time per card</div>
+          <div className="meta mb-2 opacity-60">Time per card</div>
           <Segmented<number>
             value={prefs.secondsPerQuestion}
             onChange={(v) => setPrefs({ secondsPerQuestion: v })}
@@ -66,12 +154,12 @@ export default function Settings() {
               { value: 30, label: "30s" },
               { value: 45, label: "45s" },
               { value: 60, label: "60s" },
-              { value: 0, label: "No timer" },
+              { value: 0, label: "Off" },
             ]}
           />
         </div>
         <div>
-          <div className="mb-1.5 text-xs font-bold text-slate-400">Default number of cards</div>
+          <div className="meta mb-2 opacity-60">Default number of cards</div>
           <Segmented<number>
             value={prefs.defaultCount}
             onChange={(v) => setPrefs({ defaultCount: v })}
@@ -87,11 +175,11 @@ export default function Settings() {
         <Toggle on={prefs.shuffle} onChange={(v) => setPrefs({ shuffle: v })} label="Shuffle cards by default" />
       </section>
 
-      {/* Practice */}
-      <section className="card space-y-5 p-6">
-        <h2 className="text-sm font-extrabold uppercase tracking-wider text-slate-400">Practice library</h2>
+      {/* Interface */}
+      <section className="card-flat space-y-5 p-6">
+        <h2 className="meta border-b-2 border-ink pb-2 dark:border-cream">Interface</h2>
         <div>
-          <div className="mb-1.5 text-xs font-bold text-slate-400">Questions per page</div>
+          <div className="meta mb-2 opacity-60">Questions per page (practice)</div>
           <Segmented<number>
             value={prefs.pageSize}
             onChange={(v) => setPrefs({ pageSize: v })}
@@ -103,21 +191,26 @@ export default function Settings() {
             ]}
           />
         </div>
+        <Toggle
+          on={prefs.fancyCursor}
+          onChange={(v) => setPrefs({ fancyCursor: v })}
+          label="Custom dot cursor (desktop)"
+        />
       </section>
 
       {/* Data */}
-      <section className="card space-y-4 p-6">
-        <h2 className="text-sm font-extrabold uppercase tracking-wider text-slate-400">Your data</h2>
-        <p className="text-xs leading-relaxed text-slate-400">
-          Everything is stored locally in your browser — {seen} of {TOTAL} questions touched,{" "}
-          {history.length} blitz{history.length !== 1 ? "es" : ""} recorded. Export a backup to move
-          devices, import to restore.
+      <section className="card-flat space-y-4 p-6">
+        <h2 className="meta border-b-2 border-ink pb-2 dark:border-cream">Your data</h2>
+        <p className="text-xs font-medium leading-relaxed opacity-60">
+          {seen} of {TOTAL} questions touched · {history.length} blitz
+          {history.length !== 1 ? "es" : ""} recorded. Export a backup to move devices manually, or
+          sign in above for automatic sync.
         </p>
         <div className="flex flex-wrap gap-2">
-          <button className="btn-primary !py-2 text-xs" onClick={exportData}>
+          <button className="btn-primary !px-5 !py-2" onClick={exportData}>
             ⬇ Export backup
           </button>
-          <button className="btn-ghost !py-2 text-xs" onClick={() => fileRef.current?.click()}>
+          <button className="btn-ghost !px-5 !py-2" onClick={() => fileRef.current?.click()}>
             ⬆ Import backup
           </button>
           <input
@@ -128,20 +221,23 @@ export default function Settings() {
             onChange={(e) => e.target.files?.[0] && importData(e.target.files[0])}
           />
         </div>
-        {importMsg && <p className="text-xs font-bold text-brand-500">{importMsg}</p>}
+        {importMsg && <p className="meta text-bad">{importMsg}</p>}
       </section>
 
       {/* Danger zone */}
-      <section className="card space-y-3 border-rose-500/20 p-6">
-        <h2 className="text-sm font-extrabold uppercase tracking-wider text-rose-500">Danger zone</h2>
+      <section className="card-flat space-y-3 !border-bad p-6">
+        <h2 className="meta border-b-2 border-bad pb-2 text-bad">Danger zone</h2>
         <div className="flex flex-wrap gap-2">
-          <button className="btn-danger !py-2 text-xs" onClick={() => setConfirm("progress")}>
+          <button className="btn-danger !px-5 !py-2" onClick={() => setConfirm("progress")}>
             Reset question progress
           </button>
-          <button className="btn-danger !py-2 text-xs" onClick={() => setConfirm("history")}>
+          <button className="btn-danger !px-5 !py-2" onClick={() => setConfirm("history")}>
             Clear history &amp; streak
           </button>
         </div>
+        {user && (
+          <p className="meta opacity-50">Heads-up: while signed in, resets sync to the cloud too.</p>
+        )}
       </section>
 
       <Modal
@@ -149,7 +245,7 @@ export default function Settings() {
         title={confirm === "progress" ? "Reset all question progress?" : "Clear history & streak?"}
         onClose={() => setConfirm(null)}
       >
-        <p className="text-sm text-slate-500 dark:text-slate-400">
+        <p className="text-sm opacity-70">
           {confirm === "progress"
             ? "Mastered marks, bookmarks and seen-status on every question will be wiped. Quiz history stays."
             : "All blitz attempts and your streak will be deleted. Question progress stays."}{" "}

@@ -1,6 +1,5 @@
 import {
   createContext,
-  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -16,6 +15,16 @@ import type {
   Streak,
 } from "../types";
 import { todayKey, daysBetween } from "./utils";
+import {
+  CLOUD_ENABLED,
+  pullCloud,
+  pushCloud,
+  signInGoogle,
+  signOutGoogle,
+  watchAuth,
+  type CloudData,
+  type CloudUser,
+} from "./cloud";
 
 const STORAGE_KEY = "recall-arena:v1";
 
@@ -25,6 +34,7 @@ const defaultPrefs: Preferences = {
   shuffle: true,
   showTimer: true,
   pageSize: 10,
+  fancyCursor: true,
 };
 
 const defaultStreak: Streak = {
@@ -67,6 +77,51 @@ function load(): AppState {
   }
 }
 
+/* ---------- cloud <-> local merge ---------- */
+function mergeProgress(
+  local: Record<string, QuestionProgress>,
+  remote: Record<string, QuestionProgress>
+): Record<string, QuestionProgress> {
+  const out: Record<string, QuestionProgress> = { ...remote };
+  for (const [id, lp] of Object.entries(local)) {
+    const rp = out[id] ?? {};
+    out[id] = {
+      seen: lp.seen || rp.seen || undefined,
+      mastered: lp.mastered || rp.mastered || undefined,
+      bookmarked: lp.bookmarked || rp.bookmarked || undefined,
+      lastKnown: lp.lastKnown !== undefined ? lp.lastKnown : rp.lastKnown,
+    };
+  }
+  return out;
+}
+
+function mergeStates(local: AppState, remote: Partial<CloudData>): AppState {
+  const history = [...(remote.history ?? []), ...local.history]
+    .filter((h, i, arr) => arr.findIndex((x) => x.id === h.id) === i)
+    .sort((a, b) => b.date - a.date)
+    .slice(0, 100);
+  const rs = remote.streak ?? defaultStreak;
+  const days = Array.from(new Set([...(rs.days ?? []), ...local.streak.days]))
+    .sort()
+    .slice(-90);
+  const lastStudyDay =
+    [rs.lastStudyDay, local.streak.lastStudyDay].filter(Boolean).sort().pop() ?? null;
+  return {
+    theme: local.theme, // device-local
+    progress: mergeProgress(local.progress, remote.progress ?? {}),
+    history,
+    streak: {
+      current: Math.max(local.streak.current, rs.current ?? 0),
+      longest: Math.max(local.streak.longest, rs.longest ?? 0),
+      lastStudyDay,
+      days,
+    },
+    prefs: { ...defaultPrefs, ...(remote.prefs ?? {}), ...local.prefs },
+  };
+}
+
+export type SyncStatus = "disabled" | "signedout" | "syncing" | "synced" | "error";
+
 interface AppContextValue extends AppState {
   toggleTheme: () => void;
   getProgress: (qid: string) => QuestionProgress;
@@ -82,32 +137,120 @@ interface AppContextValue extends AppState {
   bookmarkedIds: string[];
   masteredIds: string[];
   mistakeIds: string[];
+  /* ---- cloud ---- */
+  cloudEnabled: boolean;
+  user: CloudUser | null;
+  syncStatus: SyncStatus;
+  lastSyncedAt: number | null;
+  signIn: () => Promise<void>;
+  signOutNow: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AppState>(load);
-  const firstRender = useRef(true);
+  const [user, setUser] = useState<CloudUser | null>(null);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>(
+    CLOUD_ENABLED ? "signedout" : "disabled"
+  );
+  const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
+  const hydrating = useRef(false);
+  const pushTimer = useRef<number | null>(null);
 
-  // Apply theme to <html>
+  /* Apply theme to <html> */
   useEffect(() => {
     const root = document.documentElement;
     if (state.theme === "dark") root.classList.add("dark");
     else root.classList.remove("dark");
   }, [state.theme]);
 
-  // Persist (skip nothing — debounced via microtask is unnecessary here)
+  /* Fancy cursor class on <html> */
   useEffect(() => {
-    if (firstRender.current) {
-      firstRender.current = false;
-    }
+    const root = document.documentElement;
+    if (state.prefs.fancyCursor) root.classList.add("fancy-cursor");
+    else root.classList.remove("fancy-cursor");
+  }, [state.prefs.fancyCursor]);
+
+  /* Persist locally */
+  useEffect(() => {
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch {
       /* ignore quota errors */
     }
   }, [state]);
+
+  /* ---- auth watcher: on sign-in, pull + merge + push ---- */
+  useEffect(() => {
+    const unsub = watchAuth(async (u) => {
+      setUser(u);
+      if (!u) {
+        if (CLOUD_ENABLED) setSyncStatus("signedout");
+        return;
+      }
+      setSyncStatus("syncing");
+      hydrating.current = true;
+      try {
+        const remote = await pullCloud(u.uid);
+        let merged: AppState | null = null;
+        setState((local) => {
+          merged = remote ? mergeStates(local, remote) : local;
+          return merged;
+        });
+        // push the merged result so this device's work lands in the cloud
+        const snapshot = merged ?? state;
+        await pushCloud(u.uid, {
+          progress: snapshot.progress,
+          history: snapshot.history,
+          streak: snapshot.streak,
+          prefs: snapshot.prefs,
+        });
+        setLastSyncedAt(Date.now());
+        setSyncStatus("synced");
+      } catch (e) {
+        console.error("sync failed", e);
+        setSyncStatus("error");
+      } finally {
+        hydrating.current = false;
+      }
+    });
+    return unsub;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* ---- debounced push on changes while signed in ---- */
+  useEffect(() => {
+    if (!user || hydrating.current) return;
+    if (pushTimer.current) window.clearTimeout(pushTimer.current);
+    pushTimer.current = window.setTimeout(async () => {
+      try {
+        setSyncStatus("syncing");
+        await pushCloud(user.uid, {
+          progress: state.progress,
+          history: state.history,
+          streak: state.streak,
+          prefs: state.prefs,
+        });
+        setLastSyncedAt(Date.now());
+        setSyncStatus("synced");
+      } catch (e) {
+        console.error("push failed", e);
+        setSyncStatus("error");
+      }
+    }, 1500);
+    return () => {
+      if (pushTimer.current) window.clearTimeout(pushTimer.current);
+    };
+  }, [state.progress, state.history, state.streak, state.prefs, user]);
+
+  const signIn = async () => {
+    await signInGoogle();
+  };
+  const signOutNow = async () => {
+    await signOutGoogle();
+    setSyncStatus(CLOUD_ENABLED ? "signedout" : "disabled");
+  };
 
   const toggleTheme = () =>
     setState((s) => ({ ...s, theme: s.theme === "dark" ? "light" : "dark" }));
@@ -184,7 +327,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const addAttempt = (a: QuizAttempt) => {
     setState((s) => {
-      // also fold per-question results into progress
       const progress = { ...s.progress };
       for (const r of a.results) {
         const cur = progress[r.qid] ?? {};
@@ -207,8 +349,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const setPrefs = (patch: Partial<Preferences>) =>
     setState((s) => ({ ...s, prefs: { ...s.prefs, ...patch } }));
 
-  const resetProgress = () =>
-    setState((s) => ({ ...s, progress: {} }));
+  const resetProgress = () => setState((s) => ({ ...s, progress: {} }));
 
   const clearHistory = () =>
     setState((s) => ({ ...s, history: [], streak: { ...defaultStreak } }));
@@ -227,7 +368,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         .map(([id]) => id),
     [state.progress]
   );
-  // Mistakes: most recent quiz verdict was "didn't know" and not since mastered
   const mistakeIds = useMemo(
     () =>
       Object.entries(state.progress)
@@ -252,6 +392,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     bookmarkedIds,
     masteredIds,
     mistakeIds,
+    cloudEnabled: CLOUD_ENABLED,
+    user,
+    syncStatus,
+    lastSyncedAt,
+    signIn,
+    signOutNow,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

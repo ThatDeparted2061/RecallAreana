@@ -14,10 +14,7 @@ export default function Review() {
   const [page, setPage] = useState(1);
 
   const ids = tab === "mistakes" ? mistakeIds : bookmarkedIds;
-  const questions = useMemo(
-    () => ids.map((id) => QUESTION_BY_ID[id]).filter(Boolean),
-    [ids]
-  );
+  const questions = useMemo(() => ids.map((id) => QUESTION_BY_ID[id]).filter(Boolean), [ids]);
   const pageSize = prefs.pageSize;
   const pages = Math.max(1, Math.ceil(questions.length / pageSize));
   const slice = questions.slice((page - 1) * pageSize, page * pageSize);
@@ -28,17 +25,18 @@ export default function Review() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <header className="flex flex-wrap items-end justify-between gap-4">
+    <div className="space-y-8 animate-fade-in">
+      <header className="flex flex-wrap items-end justify-between gap-5 border-b-2 border-ink pb-6 dark:border-cream">
         <div>
-          <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-brand-500 dark:text-brand-300">
-            Targeted revision
-          </p>
-          <h1 className="mt-1 text-3xl font-black tracking-tight">
-            Review <span className="gradient-text">Deck</span> 🎯
+          <p className="meta opacity-50">Targeted revision</p>
+          <h1 className="display mt-2 text-6xl sm:text-8xl">
+            Clear the
+            <br />
+            Deck<span className="text-bad">.</span>
           </h1>
-          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-            Mistakes from blitzes and your starred questions. Clear them out to get interview-ready.
+          <p className="mt-4 max-w-md text-sm font-medium opacity-70">
+            Mistakes from blitzes and your starred questions. Drill them to zero before the
+            interview.
           </p>
         </div>
         {questions.length > 0 && (
@@ -46,11 +44,14 @@ export default function Review() {
             className="btn-primary"
             onClick={() =>
               nav("/blitz", {
-                state: { source: tab === "mistakes" ? "mistakes" : "bookmarks", count: Math.min(questions.length, 20) },
+                state: {
+                  source: tab === "mistakes" ? "mistakes" : "bookmarks",
+                  count: Math.min(questions.length, 20),
+                },
               })
             }
           >
-            ⚡ Blitz this deck
+            Blitz this deck ⚡
           </button>
         )}
       </header>
@@ -59,8 +60,8 @@ export default function Review() {
         value={tab}
         onChange={switchTab}
         options={[
-          { value: "mistakes", label: `✗ Mistakes (${mistakeIds.length})` },
-          { value: "bookmarks", label: `★ Bookmarks (${bookmarkedIds.length})` },
+          { value: "mistakes", label: `✗ Mistakes ${mistakeIds.length}` },
+          { value: "bookmarks", label: `★ Bookmarks ${bookmarkedIds.length}` },
         ]}
       />
 
@@ -69,7 +70,7 @@ export default function Review() {
           <EmptyState
             icon="🏆"
             title="No mistakes pending"
-            body='Miss a card in a Blitz and it lands here until you master it. "Mark done" on a question also clears it.'
+            body='Miss a card in a Blitz and it lands here until you master it. "Mark done" also clears it.'
             action={<button className="btn-primary" onClick={() => nav("/blitz")}>Start a Blitz</button>}
           />
         ) : (
@@ -88,7 +89,14 @@ export default function Review() {
         </div>
       )}
 
-      <Pagination page={page} pages={pages} onPage={(p) => { setPage(p); window.scrollTo({ top: 0, behavior: "smooth" }); }} />
+      <Pagination
+        page={page}
+        pages={pages}
+        onPage={(p) => {
+          setPage(p);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }}
+      />
     </div>
   );
 }

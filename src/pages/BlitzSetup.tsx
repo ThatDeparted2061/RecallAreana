@@ -32,7 +32,6 @@ export default function BlitzSetup() {
   const [spq, setSpq] = useState(preset.secondsPerQuestion ?? prefs.secondsPerQuestion);
   const [shuffle, setShuffle] = useState(preset.shuffle ?? prefs.shuffle);
 
-  /* pool of eligible questions under current filters */
   const pool = useMemo(() => {
     let qs = filterQuestions({ subjects, difficulties });
     if (source === "bookmarks") qs = qs.filter((q) => bookmarkedIds.includes(q.id));
@@ -67,145 +66,150 @@ export default function BlitzSetup() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8 animate-fade-in">
-      <header>
-        <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-brand-500 dark:text-brand-300">
-          Flashcard quiz
-        </p>
-        <h1 className="mt-1 text-3xl font-black tracking-tight">
-          Build your <span className="gradient-text">Blitz</span> ⚡
+    <div className="mx-auto max-w-3xl space-y-10 animate-fade-in">
+      <header className="border-b-2 border-ink pb-6 dark:border-cream">
+        <p className="meta opacity-50">Flashcard quiz</p>
+        <h1 className="display mt-2 text-6xl sm:text-7xl">
+          Build your
+          <br />
+          Blitz<span className="text-mustard dark:text-mustard">.</span>
         </h1>
-        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-          Pick subjects, difficulty and length. Cards come one at a time — call
-          <em> knew it </em>or<em> didn't know</em>, honestly.
+        <p className="mt-4 max-w-md text-sm font-medium opacity-70">
+          Cards come one at a time. Call <em>knew it</em> or <em>didn't know</em> — honestly. Missed
+          cards show the model answer and land in your review deck.
         </p>
       </header>
 
-      {/* Subjects */}
-      <section className="card p-5 sm:p-6">
-        <h2 className="mb-3 text-sm font-extrabold uppercase tracking-wider text-slate-400">1 · Subjects</h2>
-        <div className="flex flex-wrap gap-2">
-          {SUBJECTS.map((s) => {
-            const on = subjects.includes(s.id);
-            const t = SUBJECT_THEME[s.id];
-            return (
-              <button
-                key={s.id}
-                onClick={() => toggleSubject(s.id)}
-                className={`chip ${on ? "chip-on" : "chip-off"}`}
-              >
-                <span>{t.icon}</span>
-                {s.name}
-                <span className={`text-[10px] ${on ? "text-white/80" : "text-slate-400"}`}>{s.count}</span>
-              </button>
-            );
-          })}
-        </div>
-        <div className="mt-3 flex gap-3 text-xs font-semibold">
-          <button className="text-brand-500 hover:underline" onClick={() => setSubjects(SUBJECTS.map((s) => s.id))}>
-            Select all
-          </button>
-          <button className="text-slate-400 hover:underline" onClick={() => setSubjects([])}>
-            Clear
-          </button>
-        </div>
-      </section>
-
-      {/* Difficulty + source */}
-      <section className="card p-5 sm:p-6">
-        <h2 className="mb-3 text-sm font-extrabold uppercase tracking-wider text-slate-400">2 · Difficulty &amp; pool</h2>
-        <div className="flex flex-wrap gap-2">
-          {DIFFICULTIES.map((d) => {
-            const on = difficulties.includes(d);
-            return (
-              <button key={d} onClick={() => toggleDiff(d)} className={`chip ${on ? "chip-on" : "chip-off"}`}>
-                {d}
-              </button>
-            );
-          })}
-        </div>
-        <div className="mt-4">
-          <Segmented<BlitzSource>
-            value={source}
-            onChange={setSource}
-            options={[
-              { value: "all", label: "All questions" },
-              { value: "unseen", label: "Unseen only" },
-              { value: "mistakes", label: `Mistakes (${mistakeIds.length})` },
-              { value: "bookmarks", label: `Bookmarks (${bookmarkedIds.length})` },
-            ]}
-          />
-        </div>
-        <p className="mt-3 text-xs font-semibold text-slate-400">
-          {pool.length.toLocaleString()} questions match your filters
-        </p>
-      </section>
-
-      {/* Length + timer */}
-      <section className="card p-5 sm:p-6">
-        <h2 className="mb-3 text-sm font-extrabold uppercase tracking-wider text-slate-400">3 · Length &amp; timer</h2>
-
-        <div className="flex flex-wrap items-center gap-2">
-          {COUNT_PRESETS.map((n) => (
-            <button
-              key={n}
-              onClick={() => setCount(n)}
-              disabled={pool.length === 0}
-              className={`chip ${count === n ? "chip-on" : "chip-off"}`}
-            >
-              {n}
+      {/* 01 — Subjects */}
+      <section className="grid gap-4 sm:grid-cols-[5rem_1fr]">
+        <div className="display text-5xl opacity-15">01</div>
+        <div>
+          <h2 className="meta mb-3">Subjects</h2>
+          <div className="flex flex-wrap gap-2">
+            {SUBJECTS.map((s) => {
+              const on = subjects.includes(s.id);
+              const t = SUBJECT_THEME[s.id];
+              return (
+                <button key={s.id} onClick={() => toggleSubject(s.id)} className={`chip ${on ? "chip-on" : "chip-off"}`}>
+                  <span className="font-display">{t.index}</span>
+                  {s.name}
+                  <span className="opacity-60">{s.count}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="meta mt-3 flex gap-4 opacity-60">
+            <button className="underline underline-offset-4 hover:no-underline" onClick={() => setSubjects(SUBJECTS.map((s) => s.id))}>
+              Select all
             </button>
-          ))}
-          <div className="ml-1 flex items-center gap-2 text-xs font-semibold text-slate-400">
-            or custom
-            <input
-              type="number"
-              min={1}
-              max={Math.max(1, pool.length)}
-              value={count}
-              onChange={(e) => setCount(Math.max(1, Number(e.target.value) || 1))}
-              className="input !w-20 !px-2 !py-1.5 text-center"
-            />
+            <button className="underline underline-offset-4 hover:no-underline" onClick={() => setSubjects([])}>
+              Clear
+            </button>
           </div>
         </div>
+      </section>
 
-        <input
-          type="range"
-          min={1}
-          max={Math.max(1, Math.min(100, pool.length))}
-          value={Math.min(count, Math.max(1, pool.length))}
-          onChange={(e) => setCount(Number(e.target.value))}
-          className="mt-4 w-full accent-indigo-500"
-        />
-
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <div className="mb-1.5 text-xs font-bold text-slate-400">Time per card</div>
-            <Segmented<number>
-              value={spq}
-              onChange={setSpq}
+      {/* 02 — Difficulty & pool */}
+      <section className="grid gap-4 border-t-2 border-ink pt-8 dark:border-cream sm:grid-cols-[5rem_1fr]">
+        <div className="display text-5xl opacity-15">02</div>
+        <div>
+          <h2 className="meta mb-3">Difficulty &amp; pool</h2>
+          <div className="flex flex-wrap gap-2">
+            {DIFFICULTIES.map((d) => {
+              const on = difficulties.includes(d);
+              return (
+                <button key={d} onClick={() => toggleDiff(d)} className={`chip ${on ? "chip-on" : "chip-off"}`}>
+                  {d}
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-4">
+            <Segmented<BlitzSource>
+              value={source}
+              onChange={setSource}
               options={[
-                { value: 15, label: "15s" },
-                { value: 30, label: "30s" },
-                { value: 45, label: "45s" },
-                { value: 60, label: "60s" },
-                { value: 0, label: "No timer" },
+                { value: "all", label: "All" },
+                { value: "unseen", label: "Unseen" },
+                { value: "mistakes", label: `Mistakes ${mistakeIds.length}` },
+                { value: "bookmarks", label: `Bookmarks ${bookmarkedIds.length}` },
               ]}
             />
           </div>
-          <Toggle on={shuffle} onChange={setShuffle} label="Shuffle order" />
+          <p className="meta mt-3 opacity-60">{pool.length.toLocaleString()} questions match</p>
         </div>
       </section>
 
-      {/* Summary + start */}
-      <section className="card sticky bottom-16 z-30 flex flex-wrap items-center justify-between gap-4 border-brand-500/30 p-5 shadow-glow md:bottom-4">
-        <div className="text-sm">
-          <span className="font-black">{effectiveCount}</span>
-          <span className="text-slate-400"> cards · </span>
-          <span className="font-black">{spq > 0 ? formatTime(totalSec) : "untimed"}</span>
-          {spq > 0 && <span className="text-slate-400"> total</span>}
+      {/* 03 — Length & timer */}
+      <section className="grid gap-4 border-t-2 border-ink pt-8 dark:border-cream sm:grid-cols-[5rem_1fr]">
+        <div className="display text-5xl opacity-15">03</div>
+        <div>
+          <h2 className="meta mb-3">Length &amp; timer</h2>
+          <div className="flex flex-wrap items-center gap-2">
+            {COUNT_PRESETS.map((n) => (
+              <button
+                key={n}
+                onClick={() => setCount(n)}
+                disabled={pool.length === 0}
+                className={`chip ${count === n ? "chip-on" : "chip-off"}`}
+              >
+                {n}
+              </button>
+            ))}
+            <div className="meta ml-1 flex items-center gap-2 opacity-70">
+              or
+              <input
+                type="number"
+                min={1}
+                max={Math.max(1, pool.length)}
+                value={count}
+                onChange={(e) => setCount(Math.max(1, Number(e.target.value) || 1))}
+                className="input !w-20 !px-2 !py-1.5 text-center"
+              />
+            </div>
+          </div>
+
+          <input
+            type="range"
+            min={1}
+            max={Math.max(1, Math.min(100, pool.length))}
+            value={Math.min(count, Math.max(1, pool.length))}
+            onChange={(e) => setCount(Number(e.target.value))}
+            className="mt-5"
+          />
+
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <div className="meta mb-2 opacity-60">Time per card</div>
+              <Segmented<number>
+                value={spq}
+                onChange={setSpq}
+                options={[
+                  { value: 15, label: "15s" },
+                  { value: 30, label: "30s" },
+                  { value: 45, label: "45s" },
+                  { value: 60, label: "60s" },
+                  { value: 0, label: "Off" },
+                ]}
+              />
+            </div>
+            <Toggle on={shuffle} onChange={setShuffle} label="Shuffle order" />
+          </div>
         </div>
-        <button onClick={start} disabled={!canStart} className="btn-primary !px-8 !py-3 text-base">
+      </section>
+
+      {/* Start bar */}
+      <section className="card sticky bottom-16 z-30 flex flex-wrap items-center justify-between gap-4 !bg-mustard p-5 !text-ink md:bottom-4">
+        <div className="display text-3xl">
+          {effectiveCount} <span className="text-base opacity-60">cards</span>{" "}
+          {spq > 0 ? formatTime(totalSec) : "∞"}{" "}
+          {spq > 0 && <span className="text-base opacity-60">total</span>}
+        </div>
+        <button
+          onClick={start}
+          disabled={!canStart}
+          className="btn border-ink bg-ink px-10 py-4 text-sm text-cream hover:bg-cream hover:text-ink"
+        >
           Start Blitz →
         </button>
       </section>

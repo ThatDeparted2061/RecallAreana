@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { DIFFICULTIES, QUESTIONS, SUBJECT_BY_ID, SUBJECT_THEME } from "../lib/data";
 import type { Difficulty } from "../types";
 import { useApp } from "../lib/store";
-import { Bar, EmptyState, Pagination, Segmented } from "../components/ui";
+import { EmptyState, Pagination, Segmented } from "../components/ui";
 import QuestionCard from "../components/QuestionCard";
 
 export default function PracticeSubject() {
@@ -60,39 +60,40 @@ export default function PracticeSubject() {
     setDiffs((cur) => (cur.includes(d) ? cur.filter((x) => x !== d) : [...cur, d]));
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-8 animate-fade-in">
       {/* header */}
-      <header className="card relative overflow-hidden p-6 sm:p-8">
-        <div className={`pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-gradient-to-br ${t.from} ${t.to} opacity-20 blur-3xl`} />
-        <div className="relative flex flex-wrap items-center gap-5">
-          <span className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${t.from} ${t.to} text-2xl shadow-md`}>
-            {t.icon}
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
-              <Link to="/practice" className="hover:text-brand-500">Library</Link>
+      <header className="-mx-4 -mt-8 border-b-2 border-ink bg-mustard text-ink dark:border-cream sm:-mx-6">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-5 px-4 pb-6 pt-8 sm:px-6">
+          <div className="min-w-0">
+            <div className="meta flex items-center gap-2 opacity-60">
+              <Link to="/practice" className="underline underline-offset-4 hover:no-underline">
+                Library
+              </Link>
               <span>/</span>
-              <span>{subject.name}</span>
+              <span>{t.abbr}</span>
             </div>
-            <h1 className="truncate text-2xl font-black tracking-tight sm:text-3xl">{subject.name}</h1>
-            <div className="mt-2 max-w-md">
-              <Bar value={done / subject.count} colorClass={`bg-gradient-to-r ${t.from} ${t.to}`} />
-              <div className="mt-1 text-[11px] font-semibold text-slate-400">
-                {done}/{subject.count} mastered
-              </div>
+            <h1 className="display mt-1 flex items-end gap-3 text-5xl sm:text-7xl">
+              <span className="opacity-25">{t.index}</span>
+              {subject.name}
+            </h1>
+            <div className="meta mt-3">
+              {done}/{subject.count} mastered · {subject.topics.length} topics
+            </div>
+            <div className="mt-2 h-3 w-full max-w-md border-2 border-ink" style={{ borderRadius: 2 }}>
+              <div className="h-full bg-ink transition-all duration-700" style={{ width: `${(done / subject.count) * 100}%` }} />
             </div>
           </div>
           <button
             onClick={() => nav("/blitz", { state: { subjects: [subjectId] } })}
-            className="btn-primary"
+            className="btn border-ink bg-ink text-cream hover:bg-cream hover:text-ink"
           >
-            ⚡ Blitz this subject
+            Blitz this subject ⚡
           </button>
         </div>
       </header>
 
       {/* filters */}
-      <section className="card space-y-4 p-5">
+      <section className="card-flat space-y-4 p-5">
         <div className="flex flex-wrap items-center gap-2">
           <input
             value={search}
@@ -108,7 +109,9 @@ export default function PracticeSubject() {
           <select value={topic} onChange={(e) => setTopic(e.target.value)} className="input !w-auto max-w-[16rem]">
             <option value="all">All topics</option>
             {subject.topics.map((tp) => (
-              <option key={tp} value={tp}>{tp}</option>
+              <option key={tp} value={tp}>
+                {tp}
+              </option>
             ))}
           </select>
         </div>
@@ -120,11 +123,11 @@ export default function PracticeSubject() {
               { value: "all", label: "All" },
               { value: "todo", label: "To do" },
               { value: "done", label: "Done" },
-              { value: "starred", label: "★ Starred" },
-              { value: "company", label: "🏢 Company-tagged" },
+              { value: "starred", label: "★" },
+              { value: "company", label: "Company" },
             ]}
           />
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
+          <div className="meta flex items-center gap-2 opacity-70">
             Per page
             <Segmented<number>
               value={pageSize}
@@ -138,8 +141,8 @@ export default function PracticeSubject() {
             />
           </div>
         </div>
-        <p className="text-xs font-semibold text-slate-400">
-          {filtered.length} question{filtered.length !== 1 ? "s" : ""} match · page {page} of {pages}
+        <p className="meta opacity-50">
+          {filtered.length} match · page {page}/{pages}
         </p>
       </section>
 
@@ -148,7 +151,7 @@ export default function PracticeSubject() {
         <EmptyState
           icon="🔍"
           title="No questions match"
-          body="Try loosening the filters or clearing the search."
+          body="Loosen the filters or clear the search."
           action={
             <button
               className="btn-ghost"
@@ -171,7 +174,14 @@ export default function PracticeSubject() {
         </div>
       )}
 
-      <Pagination page={page} pages={pages} onPage={(p) => { setPage(p); window.scrollTo({ top: 0, behavior: "smooth" }); }} />
+      <Pagination
+        page={page}
+        pages={pages}
+        onPage={(p) => {
+          setPage(p);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }}
+      />
     </div>
   );
 }

@@ -2,28 +2,23 @@
 
 Flashcard quizzes + an exhaustive practice library for core-CS SDE interview prep, built from my own question bank: **1,013 questions** across Operating Systems, Computer Networks, DBMS & SQL, OOP & Java, and LLD & System Design. Every question carries a difficulty tag (Easy / Medium / Hard), topic, and — where known — the company it was asked at.
 
+Design: **modern-brutalist / editorial** — mustard `#F4D068`, stark black, off-white cream, oversized Anton display type, hard 2px borders, offset block shadows, marquee banner, custom dot cursor. Light (cream) and noir (black) themes.
+
 ## Features
 
 **⚡ Blitz** — the flashcard quiz mode
-- Pick subjects, difficulty mix, question pool (all / unseen / mistakes / bookmarks), number of cards, and time per card (or untimed)
-- 3-2-1 countdown, then one flashcard at a time: call *Knew it* (point, answer stays hidden) or *Didn't know* (card flips to the model answer, no point)
-- Global countdown timer sized to your quiz; auto-submits when time runs out
-- Full results review: score, per-subject breakdown, every answer expanded for the ones you missed, and a one-tap "Blitz the missed" re-run
+- Pick subjects, difficulty mix, question pool (all / unseen / mistakes / bookmarks), card count, time per card (or untimed)
+- 3-2-1 countdown, then one flashcard at a time: *Knew it* (point, answer stays hidden) or *Didn't know* (card flips to the model answer, no point)
+- Global countdown auto-submits; full results review with per-subject breakdown and one-tap "Blitz the missed"
 - Keyboard: `K` knew it, `D` didn't know, `Space` next
 
-**📚 Practice Library** — exhaustive study mode
-- Per-subject, paginated (5/10/20/50 per page) — never one giant page
-- Answers hidden until you click *Show answer*
-- Filter by difficulty, topic, search text, done/to-do, starred, company-tagged
-- Mark questions done, bookmark them
+**📚 Practice Library** — per-subject, paginated (5/10/20/50), answers hidden until clicked, filters for difficulty / topic / search / done / starred / company-tagged, bookmarks + mark-done
 
-**🎯 Review Deck** — mistakes from blitzes + bookmarks, with "Blitz this deck"
+**🎯 Review Deck** — blitz mistakes + bookmarks, drillable as a deck
+**📈 Scoreboard** — mastery per subject & difficulty, score trend, 14-day activity, streaks, history
+**⚙ Controls** — defaults (timer, counts, page size, cursor), JSON export/import, resets
 
-**📈 Stats** — mastery per subject and difficulty, blitz score trend, 14-day activity, streaks, full history
-
-**⚙ Settings** — your defaults (timer, counts, page size), JSON export/import of all progress, resets
-
-All progress lives in `localStorage` — no account, no backend, works offline once loaded.
+**🔐 Google sign-in + cloud sync (optional)** — sign in with your Gmail and progress follows you across devices (Firebase Auth + Firestore). Without setup, the app runs 100% locally.
 
 ## Run locally
 
@@ -35,19 +30,38 @@ npm run build      # production build → dist/ (single self-contained index.htm
 
 ## Deploy to Vercel
 
-1. Push this repo to GitHub:
+1. Push to GitHub:
    ```bash
    git remote add origin https://github.com/<you>/recall-arena.git
    git push -u origin main
    ```
-2. Go to [vercel.com/new](https://vercel.com/new) → Import the repo.
-3. Vercel reads `vercel.json` (Vite, `npm run build:nocheck`, output `dist`) — just click **Deploy**.
+2. [vercel.com/new](https://vercel.com/new) → Import the repo → **Deploy** (`vercel.json` handles config).
 
-Or from the CLI: `npx vercel` in this folder.
+## Enable Google sign-in (cloud sync) — one-time, ~5 min
+
+1. Go to [console.firebase.google.com](https://console.firebase.google.com) → **Add project** → name it `recall-arena` (Analytics off is fine).
+2. **Build → Authentication → Get started → Sign-in method → Google → Enable** → Save.
+3. **Build → Firestore Database → Create database** → Production mode → pick `asia-south1` (Mumbai) → Enable.
+4. Firestore → **Rules** tab → paste and Publish:
+   ```
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       match /users/{uid} {
+         allow read, write: if request.auth != null && request.auth.uid == uid;
+       }
+     }
+   }
+   ```
+5. Project overview → **⚙ Project settings → Your apps → Web app (`</>`)** → register (no hosting) → copy the `firebaseConfig` object.
+6. Paste it into **`src/firebase-config.ts`** (replace `null`), commit, push — Vercel redeploys.
+7. After first deploy: **Authentication → Settings → Authorized domains → Add domain** → your `*.vercel.app` domain (`localhost` already works).
+
+That's it — a **Sign in** button appears in the nav. Progress merges across devices (never overwrites: union of mastered/bookmarks, deduped history).
 
 ## Updating the question bank
 
-The source markdown lives in `question-sources/`. After editing those files:
+Edit the markdown in `question-sources/`, then:
 
 ```bash
 python3 scripts/parse_markdown.py   # regenerates src/data/questions.json
@@ -55,4 +69,4 @@ python3 scripts/parse_markdown.py   # regenerates src/data/questions.json
 
 ## Stack
 
-Vite + React 18 + TypeScript + Tailwind CSS. Built as a single-file static bundle (`vite-plugin-singlefile`) — deployable on any static host, even openable straight from `file://`.
+Vite + React 18 + TypeScript + Tailwind CSS + Firebase (auth + Firestore, optional). Single-file static bundle via `vite-plugin-singlefile` — deploys to any static host.

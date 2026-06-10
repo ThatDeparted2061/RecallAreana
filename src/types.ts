@@ -61,6 +61,8 @@ export interface Preferences {
   showTimer: boolean;
   /** questions per page in the practice library */
   pageSize: number;
+  /** custom dot cursor (desktop only) */
+  fancyCursor: boolean;
 }
 
 export interface AppState {

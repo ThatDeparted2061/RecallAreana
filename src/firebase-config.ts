@@ -23,5 +23,4 @@
  *  identifiers; security comes from Firestore rules.)
  * ──────────────────────────────────────────────────────────────────────────
  */
-
 export const firebaseConfig: Record<string, string> | null = null;

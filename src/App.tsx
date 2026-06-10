@@ -1,6 +1,7 @@
 import { NavLink, Route, Routes, useLocation } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { useApp } from "./lib/store";
+import { authErrorMessage } from "./lib/cloud";
 import Dashboard from "./pages/Dashboard";
 import BlitzSetup from "./pages/BlitzSetup";
 import BlitzPlay from "./pages/BlitzPlay";
@@ -59,27 +60,41 @@ function AuthButton() {
   const { cloudEnabled, user, signIn, signOutNow, syncStatus } = useApp();
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
   if (!cloudEnabled) return null;
 
   if (!user) {
     return (
-      <button
-        className="btn-primary !px-5 !py-2.5"
-        disabled={busy}
-        onClick={async () => {
-          setBusy(true);
-          try {
-            await signIn();
-          } catch (e) {
-            console.error(e);
-          } finally {
-            setBusy(false);
-          }
-        }}
-      >
-        {busy ? "…" : "Sign in"}
-      </button>
+      <div className="relative">
+        <button
+          className="btn-primary !px-5 !py-2.5"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            setErr(null);
+            try {
+              await signIn();
+            } catch (e) {
+              console.error(e);
+              setErr(authErrorMessage(e));
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          {busy ? "…" : "Sign in"}
+        </button>
+        {err && (
+          <div className="card absolute right-0 top-14 z-50 w-72 p-4 !shadow-brutal">
+            <div className="meta mb-1 text-bad">Sign-in failed</div>
+            <p className="text-xs font-medium leading-relaxed">{err}</p>
+            <button className="meta mt-2 underline underline-offset-4" onClick={() => setErr(null)}>
+              Dismiss
+            </button>
+          </div>
+        )}
+      </div>
     );
   }
 

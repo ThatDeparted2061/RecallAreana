@@ -3,6 +3,7 @@ import { useApp } from "../lib/store";
 import { Modal, Segmented, Toggle } from "../components/ui";
 import { TOTAL } from "../lib/data";
 import { relativeTime } from "../lib/utils";
+import { authErrorMessage } from "../lib/cloud";
 
 const STORAGE_KEY = "recall-arena:v1";
 
@@ -25,6 +26,7 @@ export default function Settings() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [importMsg, setImportMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [authErr, setAuthErr] = useState<string | null>(null);
 
   const exportData = () => {
     const raw = window.localStorage.getItem(STORAGE_KEY) ?? "{}";
@@ -117,26 +119,41 @@ export default function Settings() {
             </button>
           </div>
         ) : (
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <p className="max-w-sm text-sm font-medium opacity-70">
-              Sign in with Google and your progress follows you to any device.
-            </p>
-            <button
-              className="btn-primary"
-              disabled={busy}
-              onClick={async () => {
-                setBusy(true);
-                try {
-                  await signIn();
-                } catch (e) {
-                  console.error(e);
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            >
-              {busy ? "…" : "Sign in with Google"}
-            </button>
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <p className="max-w-sm text-sm font-medium opacity-70">
+                Sign in with Google and your progress follows you to any device.
+              </p>
+              <button
+                className="btn-primary"
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true);
+                  setAuthErr(null);
+                  try {
+                    await signIn();
+                  } catch (e) {
+                    console.error(e);
+                    setAuthErr(authErrorMessage(e));
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                {busy ? "…" : "Sign in with Google"}
+              </button>
+            </div>
+            {window.location.protocol === "file:" && !authErr && (
+              <p className="meta border-2 border-bad p-3 text-bad" style={{ borderRadius: 2 }}>
+                Heads-up: you opened this as a file — Google sign-in needs http(s). Run `npm run
+                dev` or use your deployed URL.
+              </p>
+            )}
+            {authErr && (
+              <p className="meta border-2 border-bad p-3 text-bad" style={{ borderRadius: 2 }}>
+                {authErr}
+              </p>
+            )}
           </div>
         )}
       </section>
